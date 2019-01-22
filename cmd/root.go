@@ -52,7 +52,25 @@ func newRootCmd() *cobra.Command {
 		Short: "execute cql command",
 		Long:  ``,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return validateParams(*o)
+			errs := validateParams(*o)
+			if len(errs) == 0 {
+				return nil
+			}
+			messages := make([]string, len(errs))
+			for i, err := range errs {
+				text := ""
+				switch err.Field() {
+				case "CQLFile":
+					text = "-f or --file"
+				case "Keyspace":
+					text = "-k or --keyspace"
+				default:
+					text = fmt.Sprintf("unknown error field: %s", err.Field())
+				}
+				messages[i] = validationErrorToText(err, text)
+			}
+			message := fmt.Sprintf("\n%s\n", strings.Join(messages, "\n"))
+			return errors.New(message)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runRootCmd(o)
@@ -76,7 +94,6 @@ func newRootCmd() *cobra.Command {
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
 		os.Exit(1)
 	}
 }

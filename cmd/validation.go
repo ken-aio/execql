@@ -16,42 +16,37 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 
 	validator "gopkg.in/go-playground/validator.v9"
 )
 
 var validate = validator.New()
 
-func validateParams(p interface{}) error {
+func validateParams(p interface{}) []validator.FieldError {
 	errs := validate.Struct(p)
 	return extractValidationErrors(errs)
 }
 
-func extractValidationErrors(err error) error {
+func extractValidationErrors(err error) []validator.FieldError {
+	fieldErrors := make([]validator.FieldError, 0)
 	if err != nil {
-		var errorText []string
 		for _, err := range err.(validator.ValidationErrors) {
-			errorText = append(errorText, validationErrorToText(err))
+			fieldErrors = append(fieldErrors, err.(validator.FieldError))
 		}
-		msg := `Parameter error:
-%s
-`
-		return fmt.Errorf(msg, strings.Join(errorText, "\n"))
+		return fieldErrors
 	}
 
 	return nil
 }
 
-func validationErrorToText(e validator.FieldError) string {
-	f := e.Field()
+func validationErrorToText(e validator.FieldError, text string) string {
 	switch e.Tag() {
 	case "required":
-		return fmt.Sprintf("%s is required", f)
+		return fmt.Sprintf("%s is required", text)
 	case "max":
-		return fmt.Sprintf("%s cannot be greater than %s", f, e.Param())
+		return fmt.Sprintf("%s cannot be greater than %s", text, e.Param())
 	case "min":
-		return fmt.Sprintf("%s must be greater than %s", f, e.Param())
+		return fmt.Sprintf("%s must be greater than %s", text, e.Param())
 	}
-	return fmt.Sprintf("%s is not valid %s", e.Field(), e.Value())
+	return fmt.Sprintf("%s is not valid %s", text, e.Value())
 }
