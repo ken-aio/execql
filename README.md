@@ -15,6 +15,10 @@ $ tar xvf execql_v0.0.1_linux_amd64.tar.gz
 $ mv execql /usr/local/bin/
 ```
 
+# Support CQL
+Support only Insert / Update / Delete.  
+Select is unsupported.  
+
 # Usage
 ```
 Usage:
