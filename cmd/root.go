@@ -150,6 +150,9 @@ func createSession(o *Option) (*gocql.Session, error) {
 	cluster.Keyspace = o.Keyspace
 	cluster.Timeout = time.Duration(o.Timeout) * time.Millisecond
 	cluster.NumConns = o.NumConns
+	if o.User != "" && o.Password != "" {
+		cluster.Authenticator = &gocql.PasswordAuthenticator{Username: o.User, Password: o.Password}
+	}
 	sess, err := cluster.CreateSession()
 	if err != nil {
 		return nil, errors.Wrapf(err, "initialize session error")
