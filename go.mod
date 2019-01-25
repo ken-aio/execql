@@ -9,12 +9,15 @@ require (
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/leodido/go-urn v1.1.0 // indirect
+	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/stretchr/testify v1.3.0 // indirect
 	github.com/thoas/go-funk v0.0.0-20181020164546-fbae87fb5b5c
 	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4
+	golang.org/x/sys v0.0.0-20190124100055-b90733256f2e // indirect
+	gopkg.in/cheggaaa/pb.v1 v1.0.27
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/go-playground/validator.v9 v9.25.0
 )

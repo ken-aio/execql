@@ -27,6 +27,7 @@ import (
 	"github.com/spf13/cobra"
 	funk "github.com/thoas/go-funk"
 	"golang.org/x/sync/errgroup"
+	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
 // Option is command option
@@ -120,11 +121,25 @@ func runRootCmd(o *Option) error {
 	stopCh := make(chan struct{})
 	eg := errgroup.Group{}
 	chunkedCQLs := funk.Chunk(cqls, (len(cqls)/o.NumThreads)+1).([][]string)
+
+	pbs := make([]*pb.ProgressBar, len(chunkedCQLs))
+	for i := 0; i < len(chunkedCQLs); i++ {
+		length := len(chunkedCQLs[i])
+		bar := pb.New(length).Prefix(fmt.Sprintf("thread#%03d\n", i))
+		fmt.Printf("bar = %+v\n", bar)
+		pbs[i] = bar
+	}
+	pool := pb.NewPool(pbs...)
+	if err := pool.Start(); err != nil {
+		return errors.Wrap(err, "ProgressBar initialize failed")
+	}
+	defer pool.Stop()
+
 	for i, chunkedCQL := range chunkedCQLs {
 		targets := chunkedCQL
 		threadNum := i
 		eg.Go(func() error {
-			return execCQLs(sess, targets, threadNum, stopCh)
+			return execCQLs(sess, targets, pbs[threadNum], stopCh)
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -166,8 +181,7 @@ func trimCQL(cql string) string {
 	return cql
 }
 
-func execCQLs(sess *gocql.Session, cqls []string, threadNum int, stopCh chan struct{}) error {
-	log.Printf("start thread#%d	/ cql num is %d\n", threadNum, len(cqls))
+func execCQLs(sess *gocql.Session, cqls []string, bar *pb.ProgressBar, stopCh chan struct{}) error {
 	for _, cql := range cqls {
 		cql = trimCQL(cql)
 		if cql == "" {
@@ -177,12 +191,14 @@ func execCQLs(sess *gocql.Session, cqls []string, threadNum int, stopCh chan str
 			return errors.Wrapf(err, "execute cql error. cql: %s", cql)
 		}
 
+		bar.Increment()
 		select {
 		case <-stopCh:
+			bar.FinishPrint("error")
 			return errors.New("stop execute cql")
 		default:
 		}
 	}
-	log.Printf("Complete thread#%d\n", threadNum)
+	bar.FinishPrint("complete")
 	return nil
 }
