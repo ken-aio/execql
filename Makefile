@@ -1,5 +1,5 @@
 NAME            := execql
-VERSION         := v0.0.2
+VERSION         := v0.0.3
 REVISION        := $(shell git rev-parse --short HEAD)
 DATE            := $(shell date -uR)
 GOVERSION       := $(shell go version)
