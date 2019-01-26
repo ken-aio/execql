@@ -24,6 +24,7 @@ import (
 
 	"github.com/gocql/gocql"
 	"github.com/pkg/errors"
+	"github.com/sethgrid/multibar"
 	"github.com/spf13/cobra"
 	funk "github.com/thoas/go-funk"
 	"golang.org/x/sync/errgroup"
@@ -119,14 +120,23 @@ func runRootCmd(o *Option) error {
 	log.Printf("Execute CQL...\n")
 	stopCh := make(chan struct{})
 	eg := errgroup.Group{}
+
+	bars, err := multibar.New()
+	if err != nil {
+		return errors.Wrap(err, "progress bar initialize error")
+	}
+	go bars.Listen()
+
 	chunkedCQLs := funk.Chunk(cqls, (len(cqls)/o.NumThreads)+1).([][]string)
 	for i, chunkedCQL := range chunkedCQLs {
 		targets := chunkedCQL
 		threadNum := i
+		bar := bars.MakeBar(len(targets), fmt.Sprintf("#%d(%d)", threadNum, len(targets)))
 		eg.Go(func() error {
-			return execCQLs(sess, targets, threadNum, stopCh)
+			return execCQLs(sess, targets, threadNum, bar, stopCh)
 		})
 	}
+
 	if err := eg.Wait(); err != nil {
 		fmt.Printf("err = %+v\n", err)
 		close(stopCh)
@@ -166,9 +176,9 @@ func trimCQL(cql string) string {
 	return cql
 }
 
-func execCQLs(sess *gocql.Session, cqls []string, threadNum int, stopCh chan struct{}) error {
-	log.Printf("start thread#%d	/ cql num is %d\n", threadNum, len(cqls))
-	for _, cql := range cqls {
+func execCQLs(sess *gocql.Session, cqls []string, threadNum int, bar multibar.ProgressFunc, stopCh chan struct{}) error {
+	for i, cql := range cqls {
+		bar(i)
 		cql = trimCQL(cql)
 		if cql == "" {
 			continue
@@ -183,6 +193,5 @@ func execCQLs(sess *gocql.Session, cqls []string, threadNum int, stopCh chan str
 		default:
 		}
 	}
-	log.Printf("Complete thread#%d\n", threadNum)
 	return nil
 }
